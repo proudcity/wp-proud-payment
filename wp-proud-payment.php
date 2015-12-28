@@ -11,15 +11,34 @@ License: GPLv2
 
 namespace Proud\Payment;
 
+// Load Extendible
+// -----------------------
+if ( ! class_exists( 'ProudPlugin' ) ) {
+  require_once( plugin_dir_path(__FILE__) . '../wp-proud-core/proud-plugin.class.php' );
+}
 
-class ProudPayment {
+class ProudPayment extends \ProudPlugin {
 
-  public function __construct() {
+  /*public function __construct() {
     add_action( 'init', array($this, 'initialize') );
     add_action( 'admin_init', array($this, 'payment_admin') );
     add_action( 'save_post', array($this, 'add_payment_fields'), 10, 2 );
     //add_filter( 'template_include', 'payment_template' );
     add_action( 'rest_api_init', array($this, 'payment_rest_support') );
+  }*/
+
+  public function __construct() {
+    /*parent::__construct( array(
+      'textdomain'     => 'wp-proud-payment',
+      'plugin_path'    => __FILE__,
+    ) );*/
+
+    $this->hook( 'init', 'create_payment' );
+    $this->hook( 'admin_init', 'payment_admin' );
+    //$this->hook( 'plugins_loaded', 'agency_init_widgets' );
+    $this->hook( 'save_post', 'add_payment_fields', 10, 2 );
+    $this->hook( 'rest_api_init', 'payment_rest_support' );
+    //add_filter( 'template_include', array($this, 'agency_template') );
   }
 
 
@@ -48,7 +67,7 @@ class ProudPayment {
   }*/
 
 
-  public function initialize() {
+  public function create_payment() {
       $labels = array(
           'singular_name'      => _x( 'Payment', 'post type singular name', 'wp-payment' ),
           'menu_name'          => _x( 'Payments', 'admin menu', 'wp-payment' ),
@@ -90,13 +109,13 @@ class ProudPayment {
   public function payment_admin() {
     add_meta_box( 'payment_meta_box',
       'Payment information',
-      'display_payment_meta_box',
+      array($this, 'display_payment_meta_box'),
       'payment', 'normal', 'high'
     );
   }
 
   public function payment_rest_support() {
-    register_api_field( 'payment',
+    register_api_field( $this, 'payment',
           'meta',
           array(
               'get_callback'    => 'payment_rest_metadata',
@@ -121,9 +140,7 @@ class ProudPayment {
   }
 
   public function payment_fields() {
-    $return = array(
-      'icon' => 'ex: fa fa-university',
-    );
+    $return = array();
 
     switch (get_option( 'payment_type', 'link' )) {
       case 'stripe':
@@ -133,12 +150,14 @@ class ProudPayment {
         $return['link'] = 'http://external.com/payment-type';
         break;
     }
+  
+    $return['icon'] = 'ex: fa fa-university';
     return $return;
   }
 
 
   public function display_payment_meta_box( $payment ) {
-    foreach (payment_fields() as $key => $label) {
+    foreach ($this->payment_fields() as $key => $label) {
       $value = esc_html( get_post_meta( $payment->ID, $key, true ) );
       ?>
       <div class="field-group">
@@ -154,7 +173,7 @@ class ProudPayment {
    */
   public function add_payment_fields( $id, $payment ) {
     if ( $payment->post_type == 'payment' ) {
-      foreach (payment_contact_fields() as $field => $label) {
+      foreach ($this->payment_fields() as $field => $label) {
         //if ( !empty( $_POST['payment_'.$field] ) ) {  // @todo: check if it has been set already to allow clearing of value
           update_post_meta( $id, $field, $_POST['payment_'.$field] );
         //}
