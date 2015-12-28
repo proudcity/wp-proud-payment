@@ -98,7 +98,7 @@ class ProudPayment extends \ProudPlugin {
           'hierarchical'       => false,
           'menu_position'      => null,
           'show_in_rest'       => true,
-          'rest_base'          => 'payment',
+          'rest_base'          => 'payments',
           'rest_controller_class' => 'WP_REST_Posts_Controller',
           'supports'           => array( 'title', 'editor', 'thumbnail',)
       );
@@ -151,7 +151,7 @@ class ProudPayment extends \ProudPlugin {
         break;
     }
   
-    $return['icon'] = 'ex: fa fa-university';
+    $return['icon'] = 'ex: fa-university';
     return $return;
   }
 
