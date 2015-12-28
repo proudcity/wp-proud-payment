@@ -73,7 +73,7 @@ class ProudPayment {
           'show_ui'            => true,
           'show_in_menu'       => true,
           'query_var'          => true,
-          'rewrite'            => array( 'slug' => 'agencies' ),
+          'rewrite'            => array( 'slug' => 'payments' ),
           'capability_type'    => 'post',
           'has_archive'        => true,
           'hierarchical'       => false,
