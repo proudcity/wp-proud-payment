@@ -115,10 +115,10 @@ class ProudPayment extends \ProudPlugin {
   }
 
   public function payment_rest_support() {
-    register_api_field( $this, 'payment',
+    register_api_field( 'payment',
           'meta',
           array(
-              'get_callback'    => 'payment_rest_metadata',
+              'get_callback'    => array( $this, 'payment_rest_metadata' ),
               'update_callback' => null,
               'schema'          => null,
           )
@@ -131,7 +131,7 @@ class ProudPayment extends \ProudPlugin {
    */
   public function payment_rest_metadata( $object, $field_name, $request ) {
       $return = array();
-      foreach (payment_contact_fields() as $key => $label) {
+      foreach ($this->payment_fields() as $key => $label) {
         if ($value = get_post_meta( $object[ 'id' ], $key, true )) {
           $return[$key] = $value;
         }
