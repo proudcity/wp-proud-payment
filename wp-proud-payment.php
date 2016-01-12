@@ -69,6 +69,7 @@ class ProudPayment extends \ProudPlugin {
 
   public function create_payment() {
       $labels = array(
+          'name'               => _x( 'Payments', 'post name', 'wp-payment' ),
           'singular_name'      => _x( 'Payment', 'post type singular name', 'wp-payment' ),
           'menu_name'          => _x( 'Payments', 'admin menu', 'wp-payment' ),
           'name_admin_bar'     => _x( 'Payment', 'add new on admin bar', 'wp-payment' ),
