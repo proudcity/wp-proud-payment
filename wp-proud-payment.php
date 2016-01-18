@@ -164,6 +164,7 @@ class ProudPayment extends \ProudPlugin {
       <div class="field-group">
         <label><?php print ucfirst($key); ?></label>
         <input type="textfield" name="payment_<?php print $key; ?>" value="<?php print $value; ?>" placeholder="<?php print $label; ?>" />
+        <?php if ('icon' === $key): ?><div class="description"><a href="https://fortawesome.github.io/Font-Awesome/icons/#search-input" target="_blank">Choose icon</a></div><?php endif;?>
       </div>
       <?php
     }
