@@ -95,7 +95,7 @@ class ProudPayment extends \ProudPlugin {
           'query_var'          => true,
           'rewrite'            => array( 'slug' => 'payments' ),
           'capability_type'    => 'post',
-          'has_archive'        => true,
+          'has_archive'        => false,
           'hierarchical'       => false,
           'menu_position'      => null,
           'show_in_rest'       => true,
@@ -128,7 +128,7 @@ class ProudPayment extends \ProudPlugin {
 
   /**
    * Alter the REST endpoint.
-   * Add metadata to the post response
+   * Add metadata to t$forms = RGFormsModel::get_forms( 1, 'title' );he post response
    */
   public function payment_rest_metadata( $object, $field_name, $request ) {
       $return = array();
@@ -140,34 +140,39 @@ class ProudPayment extends \ProudPlugin {
       return $return;
   }
 
-  public function payment_fields() {
-    $return = array();
+  public function build_fields($id) {
+    $this->fields = [];
 
     switch (get_option( 'payment_type', 'link' )) {
       case 'stripe':
-        $return['key'] = 'Stripe product key';
+        //$this->fields['key'] = 'Stripe product key';
         break;
       default: //case 'link'
-        $return['link'] = 'http://external.com/payment-type';
+        $this->fields['link'] = [
+          '#type' => 'text',
+          '#title' => __('URL'),
+          '#description' => __('Enter the full url to the payment page'),
+          '#name' => 'link',
+          '#value' => get_post_meta( $id, 'link', true ),
+        ];
         break;
     }
   
-    $return['icon'] = 'ex: fa-university';
+    $this->fields['icon'] = [
+      '#type' => 'fa-icon',
+      '#title' => __('Icon'),
+      '#description' => __('Selete the icon to use in the Actions app'),
+      '#name' => 'icon',
+      '#value' => get_post_meta( $id, 'icon', true ),
+    ];
     return $return;
   }
 
 
   public function display_payment_meta_box( $payment ) {
-    foreach ($this->payment_fields() as $key => $label) {
-      $value = esc_html( get_post_meta( $payment->ID, $key, true ) );
-      ?>
-      <div class="field-group">
-        <label><?php print ucfirst($key); ?></label>
-        <input type="textfield" name="payment_<?php print $key; ?>" value="<?php print $value; ?>" placeholder="<?php print $label; ?>" />
-        <?php if ('icon' === $key): ?><div class="description"><a href="https://fortawesome.github.io/Font-Awesome/icons/#search-input" target="_blank">Choose icon</a></div><?php endif;?>
-      </div>
-      <?php
-    }
+    $this->build_fields($payment->ID);
+    $form = new \Proud\Core\FormHelper( $this->key, $this->fields );
+    $form->printFields();
   }
 
   /**
@@ -175,10 +180,10 @@ class ProudPayment extends \ProudPlugin {
    */
   public function add_payment_fields( $id, $payment ) {
     if ( $payment->post_type == 'payment' ) {
-      foreach ($this->payment_fields() as $field => $label) {
-        //if ( !empty( $_POST['payment_'.$field] ) ) {  // @todo: check if it has been set already to allow clearing of value
-          update_post_meta( $id, $field, $_POST['payment_'.$field] );
-        //}
+      foreach ($this->build_fields() as $key => $field) {
+        if ( !empty( $_POST[$key] ) ) {  // @todo: check if it has been set already to allow clearing of value
+          update_post_meta( $id, $key, $_POST[$field] );
+        }
       }
 
     }
