@@ -132,7 +132,8 @@ class ProudPayment extends \ProudPlugin {
    */
   public function payment_rest_metadata( $object, $field_name, $request ) {
       $return = array();
-      foreach ($this->payment_fields() as $key => $label) {
+      $this->build_fields($object[ 'id' ]);
+      foreach ($this->fields as $key => $field) {
         if ($value = get_post_meta( $object[ 'id' ], $key, true )) {
           $return[$key] = $value;
         }
