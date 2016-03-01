@@ -166,7 +166,7 @@ class ProudPayment extends \ProudPlugin {
       '#name' => 'icon',
       '#value' => get_post_meta( $id, 'icon', true ),
     ];
-    return $return;
+    return $this->fields;
   }
 
 
@@ -183,10 +183,9 @@ class ProudPayment extends \ProudPlugin {
     if ( $payment->post_type == 'payment' ) {
       foreach ($this->build_fields() as $key => $field) {
         if ( !empty( $_POST[$key] ) ) {  // @todo: check if it has been set already to allow clearing of value
-          update_post_meta( $id, $key, $_POST[$field] );
+          update_post_meta( $id, $key, $_POST[$key] );
         }
       }
-
     }
   }
 
