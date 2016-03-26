@@ -165,6 +165,14 @@ class ProudPayment extends \ProudPlugin {
       ],
     ];
 
+    $this->fields['icon'] = [
+      '#type' => 'fa-icon',
+      '#title' => __('Icon'),
+      '#description' => __('Selete the icon to use in the Actions app'),
+      '#name' => 'icon',
+      '#value' => get_post_meta( $id, 'icon', true ),
+    ];
+
     return $this->fields;
   }
 
