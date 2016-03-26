@@ -9,7 +9,7 @@ Author URI: http://proudcity.com/
 License: Affero GPL v3
 */
 
-namespace Proud\Payment;
+//namespace Proud\Payment;
 
 // Load Extendible
 // -----------------------
@@ -19,53 +19,20 @@ if ( ! class_exists( 'ProudPlugin' ) ) {
 
 class ProudPayment extends \ProudPlugin {
 
-  /*public function __construct() {
-    add_action( 'init', array($this, 'initialize') );
-    add_action( 'admin_init', array($this, 'payment_admin') );
-    add_action( 'save_post', array($this, 'add_payment_fields'), 10, 2 );
-    //add_filter( 'template_include', 'payment_template' );
-    add_action( 'rest_api_init', array($this, 'payment_rest_support') );
-  }*/
-
   public function __construct() {
-    /*parent::__construct( array(
-      'textdomain'     => 'wp-proud-payment',
-      'plugin_path'    => __FILE__,
-    ) );*/
 
     $this->hook( 'init', 'create_payment' );
     $this->hook( 'admin_init', 'payment_admin' );
-    //$this->hook( 'plugins_loaded', 'agency_init_widgets' );
     $this->hook( 'save_post', 'add_payment_fields', 10, 2 );
     $this->hook( 'rest_api_init', 'payment_rest_support' );
-    //add_filter( 'template_include', array($this, 'agency_template') );
+
+    // Gravityforms integration
+    add_filter( 'gform_add_field_buttons', array($this, 'add_invoice_field') );
+    add_filter( 'gform_field_type_title' , array($this, 'invoice_title'), 10, 2);
+    add_action( 'gform_field_input' , array($this, 'invoice_field_input'), 10, 5 );
+    add_action( 'gform_editor_js_set_default_values', array($this, 'invoice_label') );
+    add_action( 'gform_editor_js', array($this, 'gform_editor_js') );
   }
-
-
-
-
-
-  /*public function payment_template( $template_path ) {
-      if ( get_post_type() == 'payment' ) {
-          if ( is_single() ) {
-              // We use the default post template here since we're just going to override it with Page Builder
-              if ( $theme_file = locate_template( array ( 'content-payment.php' ) ) ) {
-                  $template_path = $theme_file;
-              } else {
-                  $template_path = plugin_dir_path( __FILE__ ) . '/single-payment.php';
-              }
-          }
-          elseif ( is_archive() ) {
-              if ( $theme_file = locate_template( array ( 'loop-payment.php' ) ) ) {
-                  $template_path = $theme_file;
-              } else {
-                  $template_path = plugin_dir_path( __FILE__ ) . '/archive-payment.php';
-              }
-          }
-      }
-      return $template_path;
-  }*/
-
 
   public function create_payment() {
       $labels = array(
@@ -149,23 +116,55 @@ class ProudPayment extends \ProudPlugin {
         //$this->fields['key'] = 'Stripe product key';
         break;
       default: //case 'link'
-        $this->fields['link'] = [
-          '#type' => 'text',
-          '#title' => __('URL'),
-          '#description' => __('Enter the full url to the payment page'),
-          '#name' => 'link',
-          '#value' => get_post_meta( $id, 'link', true ),
-        ];
+        
         break;
     }
-  
-    $this->fields['icon'] = [
-      '#type' => 'fa-icon',
-      '#title' => __('Icon'),
-      '#description' => __('Selete the icon to use in the Actions app'),
-      '#name' => 'icon',
-      '#value' => get_post_meta( $id, 'icon', true ),
+    $this->fields['type'] = [
+      '#type' => 'radios',
+      '#title' => __('Type'),
+      //'#description' => __('The type of search to fallback on when users don\'t find what they\'re looking for in the autosuggest search and make a full site search.', 'proud-settings'),
+      '#name' => 'type',
+      '#options' => array(
+        'gravityform' => __( 'Form' ),
+        'link' => __( 'External link' ),
+      ),
+      '#value' => get_post_meta( $id, 'type', true ),
     ];
+
+    $this->fields['link'] = [
+      '#type' => 'text',
+      '#title' => __('URL'),
+      '#description' => __('Enter the full url to the payment page'),
+      '#name' => 'link',
+      '#value' => get_post_meta( $id, 'link', true ),
+      '#states' => [
+        'visible' => [
+          'type' => [
+            'operator' => '==',
+            'value' => ['link'],
+            'glue' => '||'
+          ],
+        ],
+      ],
+    ];
+  
+    $this->fields['form'] = [
+      '#type' => 'gravityform',
+      '#title' => __('Form'),
+      '#description' => __('Select a form. <a href="admin.php?page=gf_edit_forms" target="_blank">Create a new form</a>.'),
+      '#name' => 'form',
+      '#value' => get_post_meta( $id, 'form', true ),
+      '#states' => [
+        'visible' => [
+          'type' => [
+            'operator' => '==',
+            'value' => ['gravityform'],
+            'glue' => '||'
+          ],
+        ],
+      ],
+    ];
+
     return $this->fields;
   }
 
@@ -181,7 +180,7 @@ class ProudPayment extends \ProudPlugin {
    */
   public function add_payment_fields( $id, $payment ) {
     if ( $payment->post_type == 'payment' ) {
-      foreach ($this->build_fields() as $key => $field) {
+      foreach ($this->build_fields($id) as $key => $field) {
         if ( !empty( $_POST[$key] ) ) {  // @todo: check if it has been set already to allow clearing of value
           update_post_meta( $id, $key, $_POST[$key] );
         }
@@ -189,7 +188,93 @@ class ProudPayment extends \ProudPlugin {
     }
   }
 
+
+  /**
+   * Gravityforms integration
+   * Tutorials: http://wpsmith.net/2011/how-to-create-a-custom-form-field-in-gravity-forms-with-a-terms-of-service-form-field-example/,
+   * http://snippets.webaware.com.au/howto/overview-of-building-custom-fields-for-gravity-forms/
+   */
+  public function add_invoice_field( $field_groups ) {
+    foreach( $field_groups as &$group ){
+      if( $group["name"] == "pricing_fields" ){ 
+        $group["fields"][] = array(
+          "class"=>"button",
+          "value" => __("Invoice", "gravityforms"),
+          "onclick" => "StartAddField('invoice');"
+        );
+        break;
+      }
+    }
+    return $field_groups;
+  }
+
+  public function invoice_title( $title, $field_type ) {
+    if ( $field_type == 'invoice' ) {
+      $title = __( 'Invoice', 'wp-proud-payment' );
+    }
+    return $title;
+  }
+
+  public function invoice_label() {
+    //setting default field label
+    ?>
+    case "invoice" :
+    field.label = "<?php _e( 'Invoice', 'wp-proud-payment' ) ?>";
+    break;
+    <?php
+  }
+
+
+
+  // Adds the input area to the external side
+  public function invoice_field_input ( $input, $field, $value, $lead_id, $form_id ) {
+
+    if ( $field['type'] != 'invoice' ) {
+      return $input;
+    }
+    
+    $value = is_array($value) ? $value : array( 'invoice' => $_GET['invoice'] ? $_GET['invoice'] : '', 'amount' => $_GET['amount'] ? $_GET['amount'] : '' );
+
+    $unique_id = IS_ADMIN || $form_id == 0 ? "input_{$field['id']}" : 'input_' . $form_id . "_{$field['id']}";
+    $input = "<span class=''>";
+    $input .= "<input name='{$unique_id}_invoice' id='{$unique_id}_invoice' value='{$value[invoice]}' class='ginput_invoice' />";
+    $input .= "<label for='{$unique_id}_invoice'>" . __( 'Invoice Number', 'wp-proud-payment' ) . "</label>";
+    $input .= "</span>";
+
+    $input .= "<span class=''>";
+    $input .= "<input name='{$unique_id}_invoice' id='{$unique_id}_invoice' value='{$value[amount]}' class='ginput_amount' />";
+    $input .= "<label for='{$unique_id}_invoice'>" . __( 'Amount', 'wp-proud-payment' ) . "</label>";
+    $input .= "</span>";
+    
+    return '<div class="ginput_complex ginput_container no_prefix has_first_name no_middle_name has_last_name no_suffix gf_name_has_2 ginput_container_name">'. $input .'</div>';
+  }
+
+  // Now we execute some javascript technicalitites for the field to load correctly
+  public function gform_editor_js(){
+    ?>
+
+    <script type='text/javascript'>
+
+    jQuery(document).ready(function($) {
+      //Add all textarea settings to the "TOS" field plus custom "invoice_setting"
+      // fieldSettings["invoice"] = fieldSettings["textarea"] + ", .invoice_setting"; // this will show all fields that Paragraph Text field shows plus my custom setting
+
+      // from forms.js; can add custom "invoice_setting" as well
+      fieldSettings["invoice"] = ".label_setting, .description_setting, .admin_label_setting, .size_setting, .default_value_textarea_setting, .error_message_setting, .css_class_setting, .visibility_setting, .invoice_setting"; //this will show all the fields of the Paragraph Text field minus a couple that I didn't want to appear.
+
+      //binding to the load field settings event to initialize the checkbox
+      $(document).bind("gform_load_field_settings", function(event, field, form){
+        jQuery("#field_invoice").attr("checked", field["field_invoice"] == true);
+          $("#field_invoice_value").val(field["invoice"]);
+        });
+      });
+
+    </script>
+    <?php
+  }
+
 } // class
 
 
 new ProudPayment;
+
