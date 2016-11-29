@@ -22,8 +22,6 @@ class ProudPayment extends \ProudPlugin {
   public function __construct() {
 
     $this->hook( 'init', 'create_payment' );
-    $this->hook( 'admin_init', 'payment_admin' );
-    $this->hook( 'save_post', 'add_payment_fields', 10, 2 );
     $this->hook( 'rest_api_init', 'payment_rest_support' );
 
     // Gravityforms integration
@@ -74,14 +72,6 @@ class ProudPayment extends \ProudPlugin {
       register_post_type( 'payment', $args );
   }
 
-  public function payment_admin() {
-    add_meta_box( 'payment_meta_box',
-      'Payment information',
-      array($this, 'display_payment_meta_box'),
-      'payment', 'normal', 'high'
-    );
-  }
-
   public function payment_rest_support() {
     register_api_field( 'payment',
           'meta',
@@ -98,104 +88,10 @@ class ProudPayment extends \ProudPlugin {
    * Add metadata to t$forms = RGFormsModel::get_forms( 1, 'title' );he post response
    */
   public function payment_rest_metadata( $object, $field_name, $request ) {
-      $return = array();
-      $this->build_fields($object[ 'id' ]);
-      foreach ($this->fields as $key => $field) {
-        if ($value = get_post_meta( $object[ 'id' ], $key, true )) {
-          $return[$key] = $value;
-        }
-      }
-      return $return;
+    $PaymentMeta = new PaymentMeta;
+    $return = $PaymentMeta->get_options( $object[ 'id' ] );
+    return $return;
   }
-
-  public function build_fields($id) {
-    $this->fields = [];
-
-    switch (get_option( 'payment_type', 'link' )) {
-      case 'stripe':
-        //$this->fields['key'] = 'Stripe product key';
-        break;
-      default: //case 'link'
-        
-        break;
-    }
-    $this->fields['type'] = [
-      '#type' => 'radios',
-      '#title' => __('Type'),
-      //'#description' => __('The type of search to fallback on when users don\'t find what they\'re looking for in the autosuggest search and make a full site search.', 'proud-settings'),
-      '#name' => 'type',
-      '#options' => array(
-        'gravityform' => __( 'Form' ),
-        'link' => __( 'External link' ),
-      ),
-      '#value' => get_post_meta( $id, 'type', true ),
-    ];
-
-    $this->fields['link'] = [
-      '#type' => 'text',
-      '#title' => __('URL'),
-      '#description' => __('Enter the full url to the payment page'),
-      '#name' => 'link',
-      '#value' => get_post_meta( $id, 'link', true ),
-      '#states' => [
-        'visible' => [
-          'type' => [
-            'operator' => '==',
-            'value' => ['link'],
-            'glue' => '||'
-          ],
-        ],
-      ],
-    ];
-  
-    $this->fields['form'] = [
-      '#type' => 'gravityform',
-      '#title' => __('Form'),
-      '#description' => __('Select a form. <a href="admin.php?page=gf_edit_forms" target="_blank">Create a new form</a>.'),
-      '#name' => 'form',
-      '#value' => get_post_meta( $id, 'form', true ),
-      '#states' => [
-        'visible' => [
-          'type' => [
-            'operator' => '==',
-            'value' => ['gravityform'],
-            'glue' => '||'
-          ],
-        ],
-      ],
-    ];
-
-    $this->fields['icon'] = [
-      '#type' => 'fa-icon',
-      '#title' => __('Icon'),
-      '#description' => __('Selete the icon to use in the Actions app'),
-      '#name' => 'icon',
-      '#value' => get_post_meta( $id, 'icon', true ),
-    ];
-
-    return $this->fields;
-  }
-
-
-  public function display_payment_meta_box( $payment ) {
-    $this->build_fields($payment->ID);
-    $form = new \Proud\Core\FormHelper( $this->key, $this->fields );
-    $form->printFields();
-  }
-
-  /**
-   * Saves contact metadata fields 
-   */
-  public function add_payment_fields( $id, $payment ) {
-    if ( $payment->post_type == 'payment' ) {
-      foreach ($this->build_fields($id) as $key => $field) {
-        if ( !empty( $_POST[$key] ) ) {  // @todo: check if it has been set already to allow clearing of value
-          update_post_meta( $id, $key, $_POST[$key] );
-        }
-      }
-    }
-  }
-
 
   /**
    * Gravityforms integration
@@ -283,6 +179,99 @@ class ProudPayment extends \ProudPlugin {
 
 } // class
 
-
 new ProudPayment;
+
+// Payment meta box
+class PaymentMeta extends \ProudMetaBox {
+
+  public $options = [  // Meta options, key => default                             
+    'type' => '',
+    'link' => '',
+    'form' => '',
+    'icon' => '',
+  ];
+
+  public function __construct() {
+    parent::__construct( 
+      'payment', // key
+      'Payment information', // title
+      'payment', // screen
+      'normal',  // position
+      'high' // priority
+    );
+  }
+
+  /**
+   * Called on form creation
+   * @param $displaying : false if just building form, true if about to display
+   * Use displaying:true to do any difficult loading that should only occur when
+   * the form actually will display
+   */
+  public function set_fields( $displaying ) {
+
+    // Already set, no loading necessary
+    if( $displaying ) {
+      return;
+    }
+
+    $this->fields = [];
+
+    // switch (get_option( 'payment_type', 'link' )) {
+    //   case 'stripe':
+    //     //$this->fields['key'] = 'Stripe product key';
+    //     break;
+    //   default: //case 'link'
+        
+    //     break;
+    // }
+    $this->fields['type'] = [
+      '#type' => 'radios',
+      '#title' => __('Type'),
+      //'#description' => __('The type of search to fallback on when users don\'t find what they\'re looking for in the autosuggest search and make a full site search.', 'proud-settings'),
+      '#options' => array(
+        'gravityform' => __( 'Form' ),
+        'link' => __( 'External link' ),
+      ),
+      
+    ];
+
+    $this->fields['link'] = [
+      '#type' => 'text',
+      '#title' => __('URL'),
+      '#description' => __('Enter the full url to the payment page'),
+      '#states' => [
+        'visible' => [
+          'type' => [
+            'operator' => '==',
+            'value' => ['link'],
+            'glue' => '||'
+          ],
+        ],
+      ],
+    ];
+  
+    $this->fields['form'] = [
+      '#type' => 'gravityform',
+      '#title' => __('Form'),
+      '#description' => __('Select a form. <a href="admin.php?page=gf_edit_forms" target="_blank">Create a new form</a>.'),
+      '#states' => [
+        'visible' => [
+          'type' => [
+            'operator' => '==',
+            'value' => ['gravityform'],
+            'glue' => '||'
+          ],
+        ],
+      ],
+    ];
+
+    $this->fields['icon'] = [
+      '#type' => 'fa-icon',
+      '#title' => __('Icon'),
+      '#description' => __('Selete the icon to use in the Actions app'),
+    ];
+  }
+}
+if( is_admin() )
+  new PaymentMeta;
 
