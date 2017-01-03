@@ -73,7 +73,7 @@ class ProudPayment extends \ProudPlugin {
   }
 
   public function payment_rest_support() {
-    register_api_field( 'payment',
+    register_rest_field( 'payment',
           'meta',
           array(
               'get_callback'    => array( $this, 'payment_rest_metadata' ),
