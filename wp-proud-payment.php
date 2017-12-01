@@ -238,7 +238,7 @@ class PaymentMeta extends \ProudMetaBox {
     $this->fields['link'] = [
       '#type' => 'text',
       '#title' => __('URL'),
-      '#description' => __('Enter the full url to the payment page'),
+      '#description' => __('Enter the full url to the payment page, including "https://"'),
       '#states' => [
         'visible' => [
           'type' => [
