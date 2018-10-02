@@ -137,7 +137,12 @@ class ProudPayment extends \ProudPlugin {
       return $input;
     }
     
-    $value = is_array($value) ? $value : array( 'invoice' => $_GET['invoice'] ? $_GET['invoice'] : '', 'amount' => $_GET['amount'] ? $_GET['amount'] : '' );
+    $value = is_array($value)
+        ? $value
+        : array(
+          'invoice' => $_GET['invoice'] ? sanitize_text_field( $_GET['invoice'] ) : '',
+          'amount' => $_GET['amount'] ? sanitize_text_field( $_GET['amount'] ) : '',
+        );
 
     $unique_id = IS_ADMIN || $form_id == 0 ? "input_{$field['id']}" : 'input_' . $form_id . "_{$field['id']}";
     $input = "<span class=''>";
