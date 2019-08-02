@@ -191,6 +191,7 @@ class PaymentMeta extends \ProudMetaBox {
 
   public $options = [  // Meta options, key => default                             
     'type' => '',
+    'link_text' => 'Pay online now &raquo;',
     'link' => '',
     'form' => '',
     'icon' => '',
@@ -238,6 +239,21 @@ class PaymentMeta extends \ProudMetaBox {
         'link' => __( 'External link' ),
       ),
       
+    ];
+
+    $this->fields['link_text'] = [
+      '#type' => 'text',
+      '#title' => __('Link Text'),
+      '#description' => __('Text the button should display'),
+      '#states' => [
+        'visible' => [
+          'type' => [
+            'operator' => '==',
+            'value' => ['link'],
+            'glue' => '||'
+          ],
+        ],
+      ],
     ];
 
     $this->fields['link'] = [
