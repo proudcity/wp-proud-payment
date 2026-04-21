@@ -3,7 +3,7 @@
 Plugin Name: Proud Payment
 Plugin URI: http://proudcity.com/
 Description: Declares an Payment custom post type.
-Version: 1.0
+Version: 2026.04.21.0952
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -140,19 +140,19 @@ class ProudPayment extends \ProudPlugin {
     $value = is_array($value)
         ? $value
         : array(
-          'invoice' => $_GET['invoice'] ? sanitize_text_field( $_GET['invoice'] ) : '',
-          'amount' => $_GET['amount'] ? sanitize_text_field( $_GET['amount'] ) : '',
+          'invoice' => ! empty( $_GET['invoice'] ) ? sanitize_text_field( $_GET['invoice'] ) : '',
+          'amount'  => ! empty( $_GET['amount'] )  ? sanitize_text_field( $_GET['amount'] )  : '',
         );
 
     $unique_id = IS_ADMIN || $form_id == 0 ? "input_{$field['id']}" : 'input_' . $form_id . "_{$field['id']}";
     $input = "<span class=''>";
-    $input .= "<input name='{$unique_id}_invoice' id='{$unique_id}_invoice' value='{$value[invoice]}' class='ginput_invoice' />";
-    $input .= "<label for='{$unique_id}_invoice'>" . __( 'Invoice Number', 'wp-proud-payment' ) . "</label>";
+    $input .= "<input name='" . esc_attr( $unique_id . '_invoice' ) . "' id='" . esc_attr( $unique_id . '_invoice' ) . "' value='" . esc_attr( $value['invoice'] ) . "' class='ginput_invoice' />";
+    $input .= "<label for='" . esc_attr( $unique_id . '_invoice' ) . "'>" . __( 'Invoice Number', 'wp-proud-payment' ) . "</label>";
     $input .= "</span>";
 
     $input .= "<span class=''>";
-    $input .= "<input name='{$unique_id}_invoice' id='{$unique_id}_invoice' value='{$value[amount]}' class='ginput_amount' />";
-    $input .= "<label for='{$unique_id}_invoice'>" . __( 'Amount', 'wp-proud-payment' ) . "</label>";
+    $input .= "<input name='" . esc_attr( $unique_id . '_amount' ) . "' id='" . esc_attr( $unique_id . '_amount' ) . "' value='" . esc_attr( $value['amount'] ) . "' class='ginput_amount' />";
+    $input .= "<label for='" . esc_attr( $unique_id . '_amount' ) . "'>" . __( 'Amount', 'wp-proud-payment' ) . "</label>";
     $input .= "</span>";
     
     return '<div class="ginput_complex ginput_container no_prefix has_first_name no_middle_name has_last_name no_suffix gf_name_has_2 ginput_container_name">'. $input .'</div>';
